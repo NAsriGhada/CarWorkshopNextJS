@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/navBar/NavBar";
 import Footer from "@/components/footer/Footer";
+import { Toaster } from "@/components/ui/sonner";
+
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -25,6 +27,7 @@ export default function RootLayout({
         <Navbar />
         {children}
         <Footer />
+        <Toaster richColors closeButton />
       </body>
     </html>
   );
