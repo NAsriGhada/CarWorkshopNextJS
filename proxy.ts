@@ -16,6 +16,9 @@ export function proxy(req: NextRequest) {
   const isDashboard = pathname.startsWith("/dashboard");
   const isAdminDashboard = pathname.startsWith("/admin");
 
+    const isWorkshop = pathname.startsWith("/dashboard/workshop");
+
+
   // ========== NO TOKEN ==========
   if (!token) {
     if (isDashboard || isAdminDashboard) {
@@ -38,6 +41,11 @@ export function proxy(req: NextRequest) {
 
     // Admin-only protection
     if (isAdminDashboard && role !== "admin") {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+
+    // ❌ Block visitors from workshop
+    if (isWorkshop && role === "visitor") {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 

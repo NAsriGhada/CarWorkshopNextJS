@@ -11,8 +11,30 @@ import {
 } from "@/components/admin/users/columns";
 import type { Role } from "@/components/admin/RoleSelect";
 import { Button } from "@/components/ui/button";
+import { SkeletonCard } from "@/components/skeleton/Skeleton";
 
 const PAGE_SIZE = 10;
+
+// 🔹 helper to format "Last updated X ago"
+function formatRelativeTime(date: Date | null) {
+  if (!date) return "Never";
+  const now = new Date().getTime();
+  const diffMs = now - date.getTime();
+
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 5) return "Just now";
+  if (diffSec < 60) return `${diffSec} seconds ago`;
+
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? "" : "s"} ago`;
+
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24)
+    return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+}
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -22,6 +44,9 @@ export default function AdminUsersPage() {
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  // 🔹 new: track when data last successfully loaded
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // --------------------------------------------------------
   // LOAD USERS (API pagination)
@@ -45,6 +70,9 @@ export default function AdminUsersPage() {
 
       setUsers(data.users as AdminUser[]);
       setTotalPages(data.totalPages || 1);
+
+      // 🔹 record successful refresh time
+      setLastUpdated(new Date());
     } catch (err) {
       console.error(err);
       const msg = "Something went wrong while loading users";
@@ -87,6 +115,9 @@ export default function AdminUsersPage() {
         );
 
         toast.success(`Updated role to "${newRole}"`);
+
+        // 🔹 optionally also refresh "last updated" on role change
+        setLastUpdated(new Date());
       } catch (err) {
         console.error(err);
         toast.error("Something went wrong while updating role");
@@ -112,17 +143,6 @@ export default function AdminUsersPage() {
   // --------------------------------------------------------
   // UI STATES
   // --------------------------------------------------------
-  if (loading && !users.length) {
-    return (
-      <main className="mx-auto max-w-6xl px-4 py-10">
-        <h1 className="mb-4 text-2xl font-semibold">Admin · Users</h1>
-        <div className="rounded-xl border bg-white/60 p-6 text-sm text-muted-foreground">
-          Loading users…
-        </div>
-      </main>
-    );
-  }
-
   if (error && !users.length) {
     return (
       <main className="mx-auto max-w-6xl px-4 py-10">
@@ -141,45 +161,59 @@ export default function AdminUsersPage() {
   // MAIN RENDER
   // --------------------------------------------------------
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
-      {/* Page header */}
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Users &amp; Roles
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Manage user roles for the entire workshop platform.
-          </p>
-        </div>
-      </header>
-
-      {/* Data table */}
-      <UsersDataTable data={users} columns={columns} />
-
-      {/* External API pagination controls */}
-      <div className="mt-2 flex items-center justify-end gap-3 text-sm text-muted-foreground">
-        <span className="mr-2">
-          Page <span className="font-medium">{page}</span> of{" "}
-          <span className="font-medium">{totalPages}</span>
-        </span>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page <= 1}
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page >= totalPages}
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-        >
-          Next
-        </Button>
+    <div className="flex flex-1 flex-col space-y-6 p-4 md:p-8 w-full max-w-none">
+    {/* Page header */}
+    <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Users &amp; Roles
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Manage user roles for the entire workshop platform.
+        </p>
       </div>
-    </main>
-  );
+
+      <p className="text-xs text-muted-foreground">
+        Last updated:{" "}
+        <span className="font-medium">{formatRelativeTime(lastUpdated)}</span>
+      </p>
+    </header>
+
+    {/* Data table or skeleton */}
+    {loading && !users.length ? (
+      <SkeletonCard />
+    ) : (
+      <UsersDataTable data={users} columns={columns} />
+    )}
+
+    {/* External API pagination controls */}
+    <div className="mt-4 flex flex-wrap items-center justify-end gap-3 text-sm text-muted-foreground">
+      <span className="mr-auto text-xs sm:text-sm">
+        Last updated:{" "}
+        <span className="font-medium">{formatRelativeTime(lastUpdated)}</span>
+      </span>
+
+      <span>
+        Page <span className="font-medium">{page}</span> of{" "}
+        <span className="font-medium">{totalPages}</span>
+      </span>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={page <= 1}
+        onClick={() => setPage((p) => Math.max(1, p - 1))}
+      >
+        Previous
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={page >= totalPages}
+        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+      >
+        Next
+      </Button>
+    </div>
+  </div>
+);
 }

@@ -9,6 +9,7 @@ const nav = [
   { href: "/services", label: "Services" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
+  { href: "/register", label: "register" },
 ];
 
 export default function Navbar() {
