@@ -1,0 +1,140 @@
+// Prisma schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/**
+ * =========================
+ * WORK ORDER (AO)
+ * =========================
+ */
+
+enum WorkOrderStatus {
+  PENDING_REVIEW
+  APPROVED
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+model WorkOrder {
+  id            String   @id @default(uuid())
+  aoNumber      String?  @unique   // make it optional because visitor won’t know AO
+  customerName  String
+  vin           String
+  customerComplaint String?
+  make          String?
+  model         String?
+  year          Int?
+  engine        String?
+  vehicleApiSource String?
+  vehicleApiRawData Json?
+
+  status        WorkOrderStatus @default(PENDING_REVIEW)
+
+  // Link to MongoDB user without a FK:
+  createdByUserId String? // store Mongo user id as string
+
+  dateIn        DateTime   @default(now())
+  dateOut       DateTime?
+
+  operations    Operation[]
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+/**
+ * =========================
+ * OPERATION (line in the table)
+ * =========================
+ */
+model Operation {
+  id              String @id @default(uuid())
+  operationNumber Int // ✅ renamed from jobNumber
+  operationCode   String // ✅ renamed from jobCode
+  description     String
+
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
+
+  technicianId String?
+  technician   Technician? @relation(fields: [technicianId], references: [id])
+
+  parts    PartUsage[]
+  timeLogs TimeLog[]
+
+  customerMinutes Int? // ✅ Customer Time (minutes)
+
+  createdAt DateTime @default(now())
+}
+
+/**
+ * =========================
+ * TECHNICIAN
+ * =========================
+ */
+model Technician {
+  id       String @id @default(uuid())
+  techCode String @unique
+  name     String
+
+  operations Operation[] // ✅ renamed
+  timeLogs   TimeLog[]
+}
+
+/**
+ * =========================
+ * PARTS
+ * =========================
+ */
+model Part {
+  id   String @id @default(uuid())
+  code String @unique
+  name String
+
+  partUsages PartUsage[] // opposite relation field
+}
+
+/**
+ * =========================
+ * PART USAGE (operation ↔ parts)
+ * =========================
+ */
+model PartUsage {
+  id String @id @default(uuid())
+
+  operationId String
+  operation   Operation @relation(fields: [operationId], references: [id])
+
+  partId String
+  part   Part   @relation(fields: [partId], references: [id])
+
+  quantity Int
+}
+
+/**
+ * =========================
+ * TIME TRACKING
+ * =========================
+ */
+model TimeLog {
+  id String @id @default(uuid())
+
+  technicianId String
+  technician   Technician @relation(fields: [technicianId], references: [id])
+
+  operationId String
+  operation   Operation @relation(fields: [operationId], references: [id])
+
+  startTime DateTime
+  endTime   DateTime?
+
+  createdAt DateTime @default(now())
+}

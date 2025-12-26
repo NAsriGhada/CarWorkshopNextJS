@@ -3,6 +3,15 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth/jwt";
 
+const ROLE_HOME: Record<string, string> = {
+  admin: "/admin",
+  advisor: "/dashboard/advisor",
+  agent: "/dashboard/agent",
+  technician: "/dashboard/technician",
+  stock: "/dashboard/stock",
+  visitor: "/dashboard/visitor",
+};
+
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -14,10 +23,9 @@ export function proxy(req: NextRequest) {
     pathname.startsWith("/login") || pathname.startsWith("/register");
 
   const isDashboard = pathname.startsWith("/dashboard");
+  const isDashboardRoot = pathname === "/dashboard";
   const isAdminDashboard = pathname.startsWith("/admin");
-
-    const isWorkshop = pathname.startsWith("/dashboard/workshop");
-
+  const isWorkshop = pathname.startsWith("/dashboard/workshop");
 
   // ========== NO TOKEN ==========
   if (!token) {
@@ -31,12 +39,22 @@ export function proxy(req: NextRequest) {
 
   // ========== HAS TOKEN ==========
   try {
-    const decoded = verifyToken(token) as any;
-    const role = decoded.role as string | undefined;
+    const decoded = verifyToken(token) as { role?: string };
+    const rawRole = decoded.role ?? "visitor";
 
-    // Logged-in user on /login or /register → send to main dashboard
+    // normalize role (in case of "Technician" etc.)
+    const role = String(rawRole).toLowerCase();
+
+    // Logged-in user on /login or /register → send to their home
     if (isAuthPage) {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
+      const dest = ROLE_HOME[role] ?? ROLE_HOME.visitor;
+      return NextResponse.redirect(new URL(dest, req.url));
+    }
+
+    // ✅ If user visits /dashboard (root) redirect by role
+    if (isDashboardRoot) {
+      const dest = ROLE_HOME[role] ?? ROLE_HOME.visitor;
+      return NextResponse.redirect(new URL(dest, req.url));
     }
 
     // Admin-only protection
@@ -46,7 +64,7 @@ export function proxy(req: NextRequest) {
 
     // ❌ Block visitors from workshop
     if (isWorkshop && role === "visitor") {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
+      return NextResponse.redirect(new URL(ROLE_HOME.visitor, req.url));
     }
 
     return NextResponse.next();

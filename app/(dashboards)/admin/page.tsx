@@ -161,59 +161,59 @@ export default function AdminUsersPage() {
   // MAIN RENDER
   // --------------------------------------------------------
   return (
-    <div className="flex flex-1 flex-col space-y-6 p-4 md:p-8 w-full max-w-none">
-    {/* Page header */}
-    <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Users &amp; Roles
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Manage user roles for the entire workshop platform.
+    <div className="flex h-full w-full flex-1 flex-col gap-6">
+      {/* Page header */}
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Users &amp; Roles
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Manage user roles for the entire workshop platform.
+          </p>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Last updated:{" "}
+          <span className="font-medium">{formatRelativeTime(lastUpdated)}</span>
         </p>
+      </header>
+
+      {/* Data table or skeleton */}
+      {loading && !users.length ? (
+        <SkeletonCard />
+      ) : (
+        <UsersDataTable data={users} columns={columns} />
+      )}
+
+      {/* External API pagination controls */}
+      <div className="mt-2 flex flex-wrap items-center justify-end gap-3 text-sm text-muted-foreground">
+        <span className="mr-auto text-xs sm:text-sm">
+          Last updated:{" "}
+          <span className="font-medium">{formatRelativeTime(lastUpdated)}</span>
+        </span>
+
+        <span>
+          Page <span className="font-medium">{page}</span> of{" "}
+          <span className="font-medium">{totalPages}</span>
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page <= 1}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+        >
+          Previous
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page >= totalPages}
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+        >
+          Next
+        </Button>
       </div>
-
-      <p className="text-xs text-muted-foreground">
-        Last updated:{" "}
-        <span className="font-medium">{formatRelativeTime(lastUpdated)}</span>
-      </p>
-    </header>
-
-    {/* Data table or skeleton */}
-    {loading && !users.length ? (
-      <SkeletonCard />
-    ) : (
-      <UsersDataTable data={users} columns={columns} />
-    )}
-
-    {/* External API pagination controls */}
-    <div className="mt-4 flex flex-wrap items-center justify-end gap-3 text-sm text-muted-foreground">
-      <span className="mr-auto text-xs sm:text-sm">
-        Last updated:{" "}
-        <span className="font-medium">{formatRelativeTime(lastUpdated)}</span>
-      </span>
-
-      <span>
-        Page <span className="font-medium">{page}</span> of{" "}
-        <span className="font-medium">{totalPages}</span>
-      </span>
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={page <= 1}
-        onClick={() => setPage((p) => Math.max(1, p - 1))}
-      >
-        Previous
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={page >= totalPages}
-        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-      >
-        Next
-      </Button>
     </div>
-  </div>
-);
+  );
 }
