@@ -24,30 +24,38 @@ enum WorkOrderStatus {
 }
 
 model WorkOrder {
-  id            String   @id @default(uuid())
-  aoNumber      String?  @unique   // make it optional because visitor won’t know AO
-  customerName  String
-  vin           String
+  id                String  @id @default(uuid())
+  aoNumber          String? @unique // make it optional because visitor won’t know AO
+  customerName      String
+  vin               String
   customerComplaint String?
-  make          String?
-  model         String?
-  year          Int?
-  engine        String?
-  vehicleApiSource String?
+  make              String?
+  model             String?
+  year              Int?
+  engine            String?
+  vehicleApiSource  String?
   vehicleApiRawData Json?
 
-  status        WorkOrderStatus @default(PENDING_REVIEW)
+  status WorkOrderStatus @default(PENDING_REVIEW)
 
   // Link to MongoDB user without a FK:
   createdByUserId String? // store Mongo user id as string
 
-  dateIn        DateTime   @default(now())
-  dateOut       DateTime?
+  dateIn  DateTime  @default(now())
+  dateOut DateTime?
 
-  operations    Operation[]
+  operations Operation[]
 
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  appointment Appointment?
+
+  approvedByUserId   String? // Mongo user id (advisor/admin)
+  approvedAt         DateTime?
+  cancelledByUserId  String?
+  cancelledAt        DateTime?
+  cancellationReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 /**
@@ -137,4 +145,50 @@ model TimeLog {
   endTime   DateTime?
 
   createdAt DateTime @default(now())
+}
+
+/**
+ * =========================
+ * Calendar BOOKING
+ * =========================
+ */
+
+enum AppointmentStatus {
+  HELD // user selected a slot but hasn’t submitted the form yet (optional)
+  BOOKED // form submitted, booking confirmed
+  CANCELLED
+  COMPLETED
+}
+
+model Appointment {
+  id String @id @default(uuid())
+
+  // When the appointment starts/ends (store UTC in DB)
+  startAt DateTime
+  endAt   DateTime
+
+  status AppointmentStatus @default(BOOKED)
+
+  // Visitor identity (Mongo user id string)
+  createdByUserId String?
+
+  // Link to WorkOrder once form is submitted
+  workOrderId String?    @unique
+  workOrder   WorkOrder? @relation(fields: [workOrderId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([startAt])
+  @@index([createdByUserId])
+}
+
+/**
+ * =========================
+ * AO NUMBER GENERATOR
+ * =========================
+ */
+model AoCounter {
+  id         Int @id @default(1) // always 1 row
+  nextNumber Int @default(1)
 }

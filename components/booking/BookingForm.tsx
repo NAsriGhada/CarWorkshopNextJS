@@ -71,17 +71,14 @@ const vinSchema = z
     "VIN can only contain letters/numbers (no I, O, Q)."
   );
 
-// ✅ IMPORTANT: keep modelYear/year as (number | undefined) in Zod
+// ✅ modelYear removed
 const bookingSchema = z.object({
   aoNumber: z.string().min(2, "AO number is required").max(50),
   customerName: z.string().min(2, "Customer name is required").max(120),
   vin: vinSchema,
 
-  modelYear: z.number().int().min(1980).max(2100).optional(),
-
   dateIn: z.string().optional(),
 
-  // ✅ NEW: main field customer describes problem
   customerComplaint: z
     .string()
     .max(1500, "Please keep it under 1500 characters.")
@@ -101,10 +98,8 @@ type Props = {
   defaultValues?: Partial<BookingFormValues>;
   onSubmit: (values: BookingFormValues) => Promise<void> | void;
 
-  onDecodeVin?: (
-    vin: string,
-    modelYear?: number
-  ) => Promise<Partial<BookingFormValues>>;
+  // ✅ updated: no modelYear
+  onDecodeVin?: (vin: string) => Promise<Partial<BookingFormValues>>;
 
   submitLabel?: string;
 };
@@ -124,7 +119,6 @@ export function BookingForm({
       aoNumber: "",
       customerName: "",
       vin: "",
-      modelYear: undefined,
       dateIn: "",
       customerComplaint: "",
       vehicleInfo: "",
@@ -141,7 +135,6 @@ export function BookingForm({
   const vinNormalized = normalizeVin(vinValue || "");
   const vinLen = vinNormalized.length;
 
-  // ✅ typed patch helper (no any)
   function setPatch(patch: Partial<BookingFormValues>) {
     (Object.keys(patch) as (keyof BookingFormValues)[]).forEach((key) => {
       const value = patch[key];
@@ -167,8 +160,7 @@ export function BookingForm({
 
     setDecoding(true);
     try {
-      const modelYear = form.getValues("modelYear");
-      const patch = await onDecodeVin(vinNormalized, modelYear);
+      const patch = await onDecodeVin(vinNormalized); // ✅ no modelYear
       setPatch(patch);
     } catch (e: unknown) {
       const msg =
@@ -208,7 +200,6 @@ export function BookingForm({
             })}
             className="space-y-6"
           >
-            {/* Work order header */}
             <div className="grid gap-6 md:grid-cols-2">
               <FormField
                 control={form.control}
@@ -249,7 +240,6 @@ export function BookingForm({
               />
             </div>
 
-            {/* ✅ NEW: customer complaint textarea */}
             <FormField
               control={form.control}
               name="customerComplaint"
@@ -278,7 +268,6 @@ export function BookingForm({
 
             <Separator />
 
-            {/* VIN / vehicle info */}
             <div className="grid gap-6 md:grid-cols-2">
               <FormField
                 control={form.control}
@@ -313,63 +302,38 @@ export function BookingForm({
                 )}
               />
 
-              {/* Model year + Decode */}
-              <FormField
-                control={form.control}
-                name="modelYear"
-                render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormLabel>Model year (optional)</FormLabel>
-
-                    <div className="flex gap-2">
-                      <FormControl className="flex-1">
-                        <Input
-                          placeholder="e.g. 2011"
-                          value={field.value ?? ""}
-                          onChange={(e) => {
-                            const n = parseOptionalInt(e.target.value, {
-                              min: 1980,
-                              max: 2100,
-                            });
-                            field.onChange(n);
-                          }}
-                          inputMode="numeric"
-                        />
-                      </FormControl>
-
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={handleDecode}
-                        disabled={!onDecodeVin || decoding || vinLen < 11}
-                        className="gap-2"
-                      >
-                        {decoding ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <ScanSearch className="h-4 w-4" />
-                        )}
-                        Decode VIN
-                      </Button>
-                    </div>
-
-                    <FormMessage />
-
-                    {decodeError && (
-                      <Alert variant="destructive">
-                        <AlertDescription>{decodeError}</AlertDescription>
-                      </Alert>
+              {/* ✅ modelYear removed, button stays */}
+              <FormItem className="space-y-2">
+                <div className="flex justify-start md:justify-end">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleDecode}
+                    disabled={!onDecodeVin || decoding || vinLen < 11}
+                    className="gap-2"
+                  >
+                    {decoding ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ScanSearch className="h-4 w-4" />
                     )}
+                    Decode VIN
+                  </Button>
+                </div>
 
-                    {!onDecodeVin && (
-                      <p className="text-xs text-muted-foreground">
-                        Decoder not wired yet — we’ll connect this to your NHTSA
-                        route next.
-                      </p>
-                    )}
-                  </FormItem>
+                {decodeError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{decodeError}</AlertDescription>
+                  </Alert>
                 )}
-              />
+
+                {!onDecodeVin && (
+                  <p className="text-xs text-muted-foreground">
+                    Decoder not wired yet — we’ll connect this to your NHTSA
+                    route next.
+                  </p>
+                )}
+              </FormItem>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
@@ -408,7 +372,6 @@ export function BookingForm({
               />
             </div>
 
-            {/* Auto-filled preview */}
             <div className="rounded-lg border bg-muted/20 p-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">Decoded vehicle (preview)</p>
